@@ -97,14 +97,17 @@ function applyFilter(tipo, valoreData) {
 
   let risultato = state.events;
   let etichetta = "";
+  let suffissoContatore = "";
 
   if (tipo === "oggi") {
     risultato = state.events.filter((e) => isSameDay(new Date(e.data), oggi));
     etichetta = "Eventi di oggi";
+    suffissoContatore = "per oggi";
   } else if (tipo === "domani") {
     const domani = addDays(oggi, 1);
     risultato = state.events.filter((e) => isSameDay(new Date(e.data), domani));
     etichetta = "Eventi di domani";
+    suffissoContatore = "per domani";
   } else if (tipo === "weekend") {
     const [sabato, domenica] = getWeekendRange(oggi);
     risultato = state.events.filter((e) => {
@@ -112,15 +115,19 @@ function applyFilter(tipo, valoreData) {
       return d >= sabato && d <= domenica;
     });
     etichetta = "Eventi questo weekend";
+    suffissoContatore = "questo weekend";
   } else if (tipo === "data" && valoreData) {
     const scelta = startOfDay(new Date(valoreData + "T00:00:00"));
     risultato = state.events.filter((e) => isSameDay(new Date(e.data), scelta));
-    etichetta = `Eventi del ${scelta.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })}`;
+    const dataFormattata = scelta.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" });
+    etichetta = `Eventi del ${dataFormattata}`;
+    suffissoContatore = `per il ${dataFormattata}`;
   } else {
     etichetta = "";
   }
 
   state.filtered = risultato;
+  state.contatoreSuffisso = suffissoContatore;
 
   if (etichetta) {
     el.activeFilterLabel.textContent = etichetta;
@@ -134,9 +141,19 @@ function applyFilter(tipo, valoreData) {
 
 function renderList() {
   const eventi = state.filtered;
-  el.eventCount.textContent = state.activeFilter
-    ? `${eventi.length} event${eventi.length === 1 ? "o" : "i"} trovat${eventi.length === 1 ? "o" : "i"}`
-    : `${eventi.length} eventi in programma`;
+
+  // Senza filtro, "eventi in programma" è un numero enorme e generico
+  // (include date lontanissime nel futuro): darebbe l'idea fuorviante di
+  // "eventi per te ora". Il contatore ha senso solo quando è contestualizzato
+  // a un filtro scelto dall'utente.
+  if (state.activeFilter) {
+    el.eventCount.textContent =
+      `${eventi.length} event${eventi.length === 1 ? "o" : "i"} trovat${eventi.length === 1 ? "o" : "i"} ${state.contatoreSuffisso}`;
+    el.eventCount.classList.remove("hidden");
+  } else {
+    el.eventCount.textContent = "";
+    el.eventCount.classList.add("hidden");
+  }
 
   el.eventList.innerHTML = "";
 
