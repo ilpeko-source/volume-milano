@@ -8,14 +8,26 @@ const CATEGORIA_ICON = {
   dj_set_club: "🎧",
 };
 
+const GENERI = [
+  { valore: "rap_hip_hop_urban", etichetta: "Rap/Hip Hop/Urban" },
+  { valore: "elettronica_club", etichetta: "Elettronica/Club" },
+  { valore: "rock_indie_punk", etichetta: "Rock/Indie/Punk" },
+  { valore: "jazz_soul_funk", etichetta: "Jazz/Soul/Funk" },
+  { valore: "pop_cantautorato", etichetta: "Pop/Cantautorato" },
+  { valore: "altro", etichetta: "Altro" },
+];
+
 const state = {
-  events: [],       // tutti gli eventi futuri, ordinati per data
-  filtered: [],      // eventi dopo il filtro attivo
-  activeFilter: null, // 'oggi' | 'domani' | 'weekend' | 'data' | null
+  events: [],              // tutti gli eventi futuri, ordinati per data
+  filtered: [],             // eventi dopo i filtri attivi
+  filtroData: null,         // 'oggi' | 'domani' | 'weekend' | 'data' | null
+  dataScelta: null,         // valore dell'input date, solo se filtroData === 'data'
+  generiSelezionati: new Set(), // multi-selezione, combinata in AND col filtro data
 };
 
 const el = {
   quickFilters: document.getElementById("quick-filters"),
+  genreFilters: document.getElementById("genre-filters"),
   datePicker: document.getElementById("date-picker"),
   activeFilterBar: document.getElementById("active-filter-bar"),
   activeFilterLabel: document.getElementById("active-filter-label"),
@@ -33,8 +45,9 @@ init();
 
 async function init() {
   await loadEvents();
+  creaChipGeneri();
   wireUpFilters();
-  applyFilter(null);
+  aggiornaLista();
 
   el.btnBack.addEventListener("click", showListScreen);
 }
@@ -60,6 +73,17 @@ async function loadEvents() {
     .sort((a, b) => new Date(a.data) - new Date(b.data));
 }
 
+function creaChipGeneri() {
+  el.genreFilters.innerHTML = "";
+  GENERI.forEach(({ valore, etichetta }) => {
+    const btn = document.createElement("button");
+    btn.className = "filter-chip genre-chip";
+    btn.dataset.genere = valore;
+    btn.textContent = etichetta;
+    el.genreFilters.appendChild(btn);
+  });
+}
+
 function wireUpFilters() {
   el.quickFilters.querySelectorAll(".filter-chip").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -71,67 +95,101 @@ function wireUpFilters() {
         return;
       }
       el.datePicker.classList.add("hidden");
-      setActiveChip(btn);
-      applyFilter(filtro);
+      setActiveDateChip(btn);
+      state.filtroData = filtro;
+      state.dataScelta = null;
+      aggiornaLista();
     });
   });
 
   el.datePicker.addEventListener("change", () => {
     if (!el.datePicker.value) return;
-    setActiveChip(el.quickFilters.querySelector('[data-filter="data"]'));
-    applyFilter("data", el.datePicker.value);
+    setActiveDateChip(el.quickFilters.querySelector('[data-filter="data"]'));
+    state.filtroData = "data";
+    state.dataScelta = el.datePicker.value;
+    aggiornaLista();
   });
 
   el.clearFilter.addEventListener("click", () => {
     el.datePicker.classList.add("hidden");
     el.datePicker.value = "";
-    setActiveChip(null);
-    applyFilter(null);
+    setActiveDateChip(null);
+    state.filtroData = null;
+    state.dataScelta = null;
+    aggiornaLista();
+  });
+
+  // Genere: multi-selezione indipendente, combinata in AND col filtro data.
+  el.genreFilters.querySelectorAll(".genre-chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const genere = btn.dataset.genere;
+      if (state.generiSelezionati.has(genere)) {
+        state.generiSelezionati.delete(genere);
+        btn.classList.remove("active");
+      } else {
+        state.generiSelezionati.add(genere);
+        btn.classList.add("active");
+      }
+      aggiornaLista();
+    });
   });
 }
 
-function setActiveChip(activeBtn) {
+function setActiveDateChip(activeBtn) {
   el.quickFilters.querySelectorAll(".filter-chip").forEach((b) => b.classList.remove("active"));
   if (activeBtn) activeBtn.classList.add("active");
 }
 
-function applyFilter(tipo, valoreData) {
-  state.activeFilter = tipo;
+// Restituisce l'etichetta della barra del filtro data e il suffisso da usare
+// nel contatore (es. "per oggi"), separati perché la barra mostra solo il
+// filtro data mentre il contatore deve poter aggiungere anche i generi scelti.
+function etichettaFiltroData() {
+  if (state.filtroData === "oggi") {
+    return { etichetta: "Eventi di oggi", suffisso: "per oggi" };
+  }
+  if (state.filtroData === "domani") {
+    return { etichetta: "Eventi di domani", suffisso: "per domani" };
+  }
+  if (state.filtroData === "weekend") {
+    return { etichetta: "Eventi questo weekend", suffisso: "questo weekend" };
+  }
+  if (state.filtroData === "data" && state.dataScelta) {
+    const scelta = startOfDay(new Date(state.dataScelta + "T00:00:00"));
+    const dataFormattata = scelta.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" });
+    return { etichetta: `Eventi del ${dataFormattata}`, suffisso: `per il ${dataFormattata}` };
+  }
+  return { etichetta: "", suffisso: "" };
+}
+
+function calcolaFiltrati() {
   const oggi = startOfDay(new Date());
-
   let risultato = state.events;
-  let etichetta = "";
-  let suffissoContatore = "";
 
-  if (tipo === "oggi") {
-    risultato = state.events.filter((e) => isSameDay(new Date(e.data), oggi));
-    etichetta = "Eventi di oggi";
-    suffissoContatore = "per oggi";
-  } else if (tipo === "domani") {
+  if (state.filtroData === "oggi") {
+    risultato = risultato.filter((e) => isSameDay(new Date(e.data), oggi));
+  } else if (state.filtroData === "domani") {
     const domani = addDays(oggi, 1);
-    risultato = state.events.filter((e) => isSameDay(new Date(e.data), domani));
-    etichetta = "Eventi di domani";
-    suffissoContatore = "per domani";
-  } else if (tipo === "weekend") {
+    risultato = risultato.filter((e) => isSameDay(new Date(e.data), domani));
+  } else if (state.filtroData === "weekend") {
     const [sabato, domenica] = getWeekendRange(oggi);
-    risultato = state.events.filter((e) => {
+    risultato = risultato.filter((e) => {
       const d = startOfDay(new Date(e.data));
       return d >= sabato && d <= domenica;
     });
-    etichetta = "Eventi questo weekend";
-    suffissoContatore = "questo weekend";
-  } else if (tipo === "data" && valoreData) {
-    const scelta = startOfDay(new Date(valoreData + "T00:00:00"));
-    risultato = state.events.filter((e) => isSameDay(new Date(e.data), scelta));
-    const dataFormattata = scelta.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" });
-    etichetta = `Eventi del ${dataFormattata}`;
-    suffissoContatore = `per il ${dataFormattata}`;
-  } else {
-    etichetta = "";
+  } else if (state.filtroData === "data" && state.dataScelta) {
+    const scelta = startOfDay(new Date(state.dataScelta + "T00:00:00"));
+    risultato = risultato.filter((e) => isSameDay(new Date(e.data), scelta));
   }
 
-  state.filtered = risultato;
-  state.contatoreSuffisso = suffissoContatore;
+  if (state.generiSelezionati.size > 0) {
+    risultato = risultato.filter((e) => state.generiSelezionati.has(e.genere_musicale));
+  }
+
+  return risultato;
+}
+
+function aggiornaLista() {
+  const { etichetta } = etichettaFiltroData();
 
   if (etichetta) {
     el.activeFilterLabel.textContent = etichetta;
@@ -140,19 +198,26 @@ function applyFilter(tipo, valoreData) {
     el.activeFilterBar.classList.add("hidden");
   }
 
+  state.filtered = calcolaFiltrati();
   renderList();
 }
 
 function renderList() {
   const eventi = state.filtered;
+  const { suffisso } = etichettaFiltroData();
+  const nomiGeneriSelezionati = GENERI
+    .filter((g) => state.generiSelezionati.has(g.valore))
+    .map((g) => g.etichetta);
+  const filtroAttivo = Boolean(suffisso) || nomiGeneriSelezionati.length > 0;
 
-  // Senza filtro, "eventi in programma" è un numero enorme e generico
+  // Senza alcun filtro, "eventi in programma" è un numero enorme e generico
   // (include date lontanissime nel futuro): darebbe l'idea fuorviante di
   // "eventi per te ora". Il contatore ha senso solo quando è contestualizzato
-  // a un filtro scelto dall'utente.
-  if (state.activeFilter) {
+  // ad almeno un filtro scelto dall'utente (data e/o genere).
+  if (filtroAttivo) {
+    const parti = [suffisso, nomiGeneriSelezionati.join(", ")].filter(Boolean);
     el.eventCount.textContent =
-      `${eventi.length} event${eventi.length === 1 ? "o" : "i"} trovat${eventi.length === 1 ? "o" : "i"} ${state.contatoreSuffisso}`;
+      `${eventi.length} event${eventi.length === 1 ? "o" : "i"} trovat${eventi.length === 1 ? "o" : "i"} ${parti.join(" · ")}`;
     el.eventCount.classList.remove("hidden");
   } else {
     el.eventCount.textContent = "";

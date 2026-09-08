@@ -89,6 +89,26 @@ body {
   border-color: var(--chip-active-bg);
 }
 
+/* Riga generi: multi-selezione, quindi va a capo invece di scorrere
+   orizzontalmente (sono 6 etichette, spesso più lunghe di "Oggi"/"Domani"),
+   e un colore diverso dai chip data per far capire a colpo d'occhio che è
+   un'altra dimensione di filtro, combinabile con la prima. */
+.genre-filters {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+.genre-chip {
+  font-size: 13px;
+  padding: 7px 14px;
+}
+
+.genre-chip.active {
+  background: var(--live);
+  border-color: var(--live);
+  color: #fff;
+}
+
 .date-picker {
   width: 100%;
   padding: 10px 12px;
