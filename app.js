@@ -42,7 +42,11 @@ async function init() {
 const CITTA_APP = "Milano";
 
 async function loadEvents() {
-  const res = await fetch("eventi_output.json");
+  // Cache-busting: gli hosting statici (es. GitHub Pages) mettono in cache
+  // questo file per diversi minuti - senza un parametro sempre diverso,
+  // un aggiornamento dei dati non comparirebbe subito per chi ha già
+  // visitato la pagina di recente.
+  const res = await fetch(`eventi_output.json?t=${Date.now()}`);
   const data = await res.json();
 
   // La pipeline raccoglie eventi anche da fonti fuori Milano (es. MantovaSoon,
