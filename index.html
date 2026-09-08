@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Volume</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- SCHERMATA LISTA -->
+  <section id="screen-list" class="screen">
+    <header class="app-header">
+      <div class="wordmark">VOLUME</div>
+      <div class="city-label">Milano</div>
+    </header>
+
+    <div class="filters" id="quick-filters">
+      <button class="filter-chip" data-filter="oggi">Oggi</button>
+      <button class="filter-chip" data-filter="domani">Domani</button>
+      <button class="filter-chip" data-filter="weekend">Questo weekend</button>
+      <button class="filter-chip" data-filter="data">Scegli data</button>
+    </div>
+
+    <input type="date" id="date-picker" class="date-picker hidden">
+
+    <div id="active-filter-bar" class="active-filter-bar hidden">
+      <span id="active-filter-label"></span>
+      <button id="clear-filter" class="clear-filter">✕ rimuovi filtro</button>
+    </div>
+
+    <div id="event-count" class="event-count"></div>
+
+    <div id="event-list" class="event-list"></div>
+    <div id="empty-state" class="empty-state hidden">Nessun evento trovato per questo filtro.</div>
+  </section>
+
+  <!-- SCHERMATA DETTAGLIO -->
+  <section id="screen-detail" class="screen hidden">
+    <button id="btn-back" class="btn-back">← Indietro</button>
+    <div id="detail-content"></div>
+  </section>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
