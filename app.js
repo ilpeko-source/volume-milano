@@ -8,6 +8,16 @@ const CATEGORIA_ICON = {
   dj_set_club: "🎧",
 };
 
+// Wrapper sicuro per Umami: lo script è caricato con "defer" da un dominio
+// esterno e può non essere ancora pronto, o essere bloccato da un ad-blocker
+// - senza questo controllo una chiamata a window.umami.track romperebbe
+// silenziosamente l'interazione dell'utente (click, filtro) in quei casi.
+function traccia(nomeEvento, dati) {
+  if (window.umami) {
+    window.umami.track(nomeEvento, dati);
+  }
+}
+
 const GENERI = [
   { valore: "rap_hip_hop_urban", etichetta: "Rap/Hip Hop/Urban" },
   { valore: "elettronica_club", etichetta: "Elettronica/Club" },
@@ -98,6 +108,7 @@ function wireUpFilters() {
       setActiveDateChip(btn);
       state.filtroData = filtro;
       state.dataScelta = null;
+      traccia("filtro-data", { tipo: filtro });
       aggiornaLista();
     });
   });
@@ -107,6 +118,7 @@ function wireUpFilters() {
     setActiveDateChip(el.quickFilters.querySelector('[data-filter="data"]'));
     state.filtroData = "data";
     state.dataScelta = el.datePicker.value;
+    traccia("filtro-data", { tipo: "data-specifica" });
     aggiornaLista();
   });
 
@@ -129,6 +141,7 @@ function wireUpFilters() {
       } else {
         state.generiSelezionati.add(genere);
         btn.classList.add("active");
+        traccia("filtro-genere", { genere });
       }
       aggiornaLista();
     });
@@ -286,6 +299,19 @@ function showDetailScreen(evento) {
   el.detailContent.innerHTML = "";
   el.detailContent.appendChild(creaThumb(evento, "detail-hero"));
   el.detailContent.insertAdjacentHTML("beforeend", renderDetailBody(evento));
+
+  // Listener aggiunti via JS (non inline nell'HTML): il titolo evento può
+  // contenere apici che romperebbero un attributo onclick="..." costruito
+  // per concatenazione, stesso problema già risolto altrove per le immagini.
+  const linkBiglietti = el.detailContent.querySelector('[data-track="biglietti"]');
+  if (linkBiglietti) {
+    linkBiglietti.addEventListener("click", () => traccia("click-biglietti", { evento: evento.titolo }));
+  }
+  const linkFonte = el.detailContent.querySelector('[data-track="fonte"]');
+  if (linkFonte) {
+    linkFonte.addEventListener("click", () => traccia("click-fonte", { evento: evento.titolo }));
+  }
+
   el.screenList.classList.add("hidden");
   el.screenDetail.classList.remove("hidden");
   window.scrollTo(0, 0);
@@ -332,10 +358,10 @@ function renderDetailBody(evento) {
 
   html += `<div class="detail-actions">`;
   if (evento.link_biglietti) {
-    html += `<a class="btn btn-primary" href="${escapeAttr(evento.link_biglietti)}" target="_blank" rel="noopener">Biglietti</a>`;
+    html += `<a class="btn btn-primary" data-track="biglietti" href="${escapeAttr(evento.link_biglietti)}" target="_blank" rel="noopener">Biglietti</a>`;
   }
   if (evento.link_evento) {
-    html += `<a class="btn btn-secondary" href="${escapeAttr(evento.link_evento)}" target="_blank" rel="noopener">Pagina della fonte</a>`;
+    html += `<a class="btn btn-secondary" data-track="fonte" href="${escapeAttr(evento.link_evento)}" target="_blank" rel="noopener">Pagina della fonte</a>`;
   }
   html += `</div>`;
 
