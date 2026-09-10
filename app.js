@@ -8,6 +8,15 @@ const CATEGORIA_ICON = {
   dj_set_club: "🎧",
 };
 
+// La maggior parte delle fonti non ha MAI un prezzo estratto (prezzo=null
+// significa "non rilevato dal parser", non "gratis"): il badge scatta solo
+// su pattern espliciti di ingresso libero/gratuito, mai per assenza di dato.
+function eventoGratuito(evento) {
+  const p = (evento.prezzo || "").toLowerCase().trim();
+  if (!p) return false;
+  return p.includes("libero") || p === "free" || p.startsWith("grati");
+}
+
 // Wrapper sicuro per Umami: lo script è caricato con "defer" da un dominio
 // esterno e può non essere ancora pronto, o essere bloccato da un ad-blocker
 // - senza questo controllo una chiamata a window.umami.track romperebbe
@@ -293,7 +302,10 @@ function creaEventCard(evento) {
   const info = document.createElement("div");
   info.className = "event-info";
   info.innerHTML = `
-    <span class="badge ${evento.categoria_musicale}">${CATEGORIA_LABEL[evento.categoria_musicale] || evento.categoria_musicale}</span>
+    <div class="badge-row">
+      <span class="badge ${evento.categoria_musicale}">${CATEGORIA_LABEL[evento.categoria_musicale] || evento.categoria_musicale}</span>
+      ${eventoGratuito(evento) ? '<span class="badge free">Free</span>' : ""}
+    </div>
     <div class="event-title">${escapeHtml(evento.titolo)}</div>
     <div class="event-meta">${formatDataOra(evento.data)}</div>
     <div class="event-meta">${escapeHtml(evento.luogo || "")}</div>
@@ -420,7 +432,10 @@ function renderDetailBody(evento) {
   const luogoIndirizzo = [evento.luogo, evento.indirizzo].filter(Boolean).join(" — ");
 
   let html = `
-    <span class="badge detail-badge ${evento.categoria_musicale}">${CATEGORIA_LABEL[evento.categoria_musicale] || evento.categoria_musicale}</span>
+    <div class="badge-row detail-badge">
+      <span class="badge ${evento.categoria_musicale}">${CATEGORIA_LABEL[evento.categoria_musicale] || evento.categoria_musicale}</span>
+      ${eventoGratuito(evento) ? '<span class="badge free">Free</span>' : ""}
+    </div>
     <h1 class="detail-title">${escapeHtml(evento.titolo)}</h1>
   `;
 

@@ -8,6 +8,7 @@
   --accent-2: #dfe9ea;
   --live: #3d5a80;
   --djset: #a4508b;
+  --free: #4a7c59;
   --chip-bg: #ffffff;
   --chip-active-bg: #17181c;
   --chip-active-ink: #ffffff;
@@ -29,6 +30,7 @@
     --accent-2: #1f2f36;
     --live: #5b82b3;
     --djset: #c17bb0;
+    --free: #7cb88c;
     --chip-bg: #1e2026;
     --chip-active-bg: #f0efe9;
     --chip-active-ink: #14151a;
@@ -240,17 +242,27 @@ body {
 
 .badge {
   display: inline-block;
-  align-self: flex-start;
   font-size: 11px;
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 999px;
   color: #fff;
-  margin-top: 2px;
 }
 
 .badge.concerto_live { background: var(--live); }
 .badge.dj_set_club { background: var(--djset); }
+.badge.free { background: var(--free); }
+
+/* Riga per affiancare il badge categoria e l'eventuale badge "Free" invece
+   di impilarli - .event-info è un flex a colonna, quindi senza questo
+   contenitore ogni <span> diventerebbe una riga a sé. */
+.badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
 
 .empty-state {
   text-align: center;
