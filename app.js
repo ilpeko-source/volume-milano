@@ -127,6 +127,18 @@ function wireUpFilters() {
         return;
       }
       el.datePicker.classList.add("hidden");
+
+      // Bug: ricliccare un chip già attivo non lo disattivava, restava
+      // selezionato anche se il click sembrava "passare". Ricliccare un
+      // chip attivo ora equivale al pulsante "rimuovi filtro".
+      if (btn.classList.contains("active")) {
+        setActiveDateChip(null);
+        state.filtroData = null;
+        state.dataScelta = null;
+        aggiornaLista();
+        return;
+      }
+
       setActiveDateChip(btn);
       state.filtroData = filtro;
       state.dataScelta = null;

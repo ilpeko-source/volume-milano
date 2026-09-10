@@ -12,6 +12,28 @@
   --chip-active-bg: #17181c;
   --chip-active-ink: #ffffff;
   --radius: 14px;
+  color-scheme: light;
+}
+
+/* Tema scuro automatico: segue solo la preferenza di sistema
+   (prefers-color-scheme), nessun toggle manuale per ora. --accent resta
+   invariato perché è sempre usato come sfondo di bottoni con testo bianco
+   fisso, non come colore di testo - non ha bisogno di invertirsi. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14151a;
+    --card-bg: #1e2026;
+    --ink: #f0efe9;
+    --ink-soft: #9a9da6;
+    --border: #2c2f37;
+    --accent-2: #1f2f36;
+    --live: #5b82b3;
+    --djset: #c17bb0;
+    --chip-bg: #1e2026;
+    --chip-active-bg: #f0efe9;
+    --chip-active-ink: #14151a;
+    color-scheme: dark;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -134,7 +156,10 @@ body {
 .clear-filter {
   background: none;
   border: none;
-  color: var(--accent);
+  /* --accent resta scuro in entrambi i temi (serve da sfondo bottoni con
+     testo bianco fisso): come colore di testo qui non si adatterebbe al
+     tema scuro. --ink invece è pensato apposta per questo. */
+  color: var(--ink);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -177,7 +202,7 @@ body {
   border-radius: 10px;
   object-fit: cover;
   flex: 0 0 auto;
-  background: linear-gradient(135deg, #1c2b3a, #3d5a80);
+  background: linear-gradient(135deg, var(--accent), var(--live));
 }
 
 .event-thumb.placeholder {
@@ -252,7 +277,7 @@ body {
   aspect-ratio: 1 / 1;
   border-radius: var(--radius);
   object-fit: cover;
-  background: linear-gradient(135deg, #1c2b3a, #3d5a80);
+  background: linear-gradient(135deg, var(--accent), var(--live));
   margin-bottom: 16px;
 }
 
