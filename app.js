@@ -59,7 +59,29 @@ async function init() {
   wireUpFilters();
   aggiornaLista();
 
-  el.btnBack.addEventListener("click", showListScreen);
+  // Un link condiviso deve poter aprire direttamente la scheda di
+  // quell'evento, non solo la lista - altrimenti "condividi" non avrebbe
+  // molto senso per chi lo riceve.
+  if (!apriEventoDaHash()) {
+    showListScreen({ aggiornaUrl: false });
+  }
+  window.addEventListener("popstate", () => {
+    if (!apriEventoDaHash()) {
+      showListScreen({ aggiornaUrl: false });
+    }
+  });
+
+  el.btnBack.addEventListener("click", () => showListScreen());
+}
+
+function apriEventoDaHash() {
+  const match = location.hash.match(/^#evento=(.+)$/);
+  if (!match) return false;
+  const id = decodeURIComponent(match[1]);
+  const evento = state.events.find((e) => e.id_dedup === id);
+  if (!evento) return false;
+  showDetailScreen(evento, { aggiornaUrl: false });
+  return true;
 }
 
 const CITTA_APP = "Milano";
@@ -295,7 +317,7 @@ function creaThumbPlaceholder(evento, classeBase) {
   return div;
 }
 
-function showDetailScreen(evento) {
+function showDetailScreen(evento, { aggiornaUrl = true } = {}) {
   el.detailContent.innerHTML = "";
   el.detailContent.appendChild(creaThumb(evento, "detail-hero"));
   el.detailContent.insertAdjacentHTML("beforeend", renderDetailBody(evento));
@@ -311,15 +333,75 @@ function showDetailScreen(evento) {
   if (linkFonte) {
     linkFonte.addEventListener("click", () => traccia("click-fonte", { evento: evento.titolo }));
   }
+  const bottoneCondividi = el.detailContent.querySelector('[data-track="condividi"]');
+  if (bottoneCondividi) {
+    bottoneCondividi.addEventListener("click", () => condividiEvento(evento, bottoneCondividi));
+  }
 
   el.screenList.classList.add("hidden");
   el.screenDetail.classList.remove("hidden");
   window.scrollTo(0, 0);
+
+  // Aggiorna l'URL così la pagina del singolo evento è linkabile/condivisibile
+  // direttamente. Non lo si fa quando si arriva già da un link con hash
+  // (apriEventoDaHash) o da popstate, per non spingere una voce di history
+  // duplicata sopra quella che c'è già.
+  if (aggiornaUrl) {
+    history.pushState({ evento: evento.id_dedup }, "", `#evento=${encodeURIComponent(evento.id_dedup)}`);
+  }
 }
 
-function showListScreen() {
+function showListScreen({ aggiornaUrl = true } = {}) {
   el.screenDetail.classList.add("hidden");
   el.screenList.classList.remove("hidden");
+  if (aggiornaUrl) {
+    history.pushState({}, "", location.pathname + location.search);
+  }
+}
+
+function urlDettaglioEvento(evento) {
+  return `${location.origin}${location.pathname}#evento=${encodeURIComponent(evento.id_dedup)}`;
+}
+
+function urlGoogleMaps(evento) {
+  const query = evento.indirizzo || `${evento.luogo || ""} ${evento.citta || ""}`.trim();
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+async function condividiEvento(evento, bottone) {
+  const url = urlDettaglioEvento(evento);
+  const descrizione = [formatDataOra(evento.data), evento.luogo].filter(Boolean).join(" · ");
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: evento.titolo, text: descrizione, url });
+      traccia("click-condividi", { evento: evento.titolo });
+    } catch (err) {
+      // L'utente ha annullato la condivisione dal foglio nativo: non è un
+      // errore da segnalare, e per coerenza con "quando l'utente completa
+      // un'azione di condivisione" non si traccia nemmeno l'evento.
+    }
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(url);
+    traccia("click-condividi", { evento: evento.titolo });
+    mostraConfermaCopia(bottone);
+  } catch (err) {
+    // Clipboard non disponibile (es. contesto non sicuro/permessi negati):
+    // nessun fallback ulteriore per ora.
+  }
+}
+
+function mostraConfermaCopia(bottone) {
+  const testoOriginale = bottone.textContent;
+  bottone.textContent = "✓ Link copiato!";
+  bottone.disabled = true;
+  setTimeout(() => {
+    bottone.textContent = testoOriginale;
+    bottone.disabled = false;
+  }, 2000);
 }
 
 function renderDetailBody(evento) {
@@ -351,6 +433,7 @@ function renderDetailBody(evento) {
         <div>
           <div class="label">Luogo</div>
           <div class="value">${escapeHtml(luogoIndirizzo)}</div>
+          <a class="maps-link" href="${escapeAttr(urlGoogleMaps(evento))}" target="_blank" rel="noopener">Apri in Maps ↗</a>
         </div>
       </div>
     `;
@@ -363,6 +446,7 @@ function renderDetailBody(evento) {
   if (evento.link_evento) {
     html += `<a class="btn btn-secondary" data-track="fonte" href="${escapeAttr(evento.link_evento)}" target="_blank" rel="noopener">Pagina della fonte</a>`;
   }
+  html += `<button type="button" class="btn btn-secondary" data-track="condividi">Condividi</button>`;
   html += `</div>`;
 
   return html;

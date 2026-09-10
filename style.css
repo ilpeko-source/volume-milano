@@ -299,6 +299,17 @@ body {
 
 .detail-row .value { font-weight: 600; }
 
+.maps-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--live);
+  text-decoration: none;
+}
+
+.maps-link:hover { text-decoration: underline; }
+
 .detail-actions {
   display: flex;
   flex-direction: column;
